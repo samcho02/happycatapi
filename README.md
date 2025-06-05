@@ -11,7 +11,7 @@ API of internet famous cats
 ## MVP Features
 - **`GET /gifs`** - Retrieve a list of all cat GIF meme alias 
 - **`GET /gifs/random`** - Retrieve a random cat GIF meme 
-- **`GET /gifs/{alias}`** - Retrieve details of a specific cat GIF meme  
+- **`GET /gifs/{tag}`** - Retrieve details of a specific cat GIF meme  
 
 **For authorized users only**
 - **`POST /gifs`** - Upload a new cat GIF meme (via file upload or URL)  
