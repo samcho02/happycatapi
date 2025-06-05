@@ -9,3 +9,6 @@ venv/
 
 # Ignore environment files
 .env
+
+# Ignore todo list
+TODO.md
