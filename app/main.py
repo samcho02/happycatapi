@@ -1,6 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from fastapi.responses import PlainTextResponse
+from app.api.gif_routes import router as gif_router
 
 # Create FastAPI app
 app = FastAPI(
@@ -9,11 +10,8 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# class Item(BaseModel):
-#     catID: int = None
-#     alias: str = None
-#     url:   str = None
-    
+# Router for /gifs routes
+app.include_router(gif_router, prefix="/gifs")
 
 '''
     GET /: Welcome endpoint
@@ -30,12 +28,3 @@ def root():
     GET /gifs/{id}      - Retrieve details of a specific cat GIF meme  
     """
 
-
-@app.get("/happycat")
-def get_happy_cat():
-    return {
-        "catID": 0, 
-        "alias": "happycat", 
-        "url": "https://tenor.com/bXAn9.gif"
-    }
-    # return Item(0, "happycat", "https://tenor.com/bXAn9.gif")
