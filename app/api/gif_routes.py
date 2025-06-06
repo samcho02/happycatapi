@@ -6,7 +6,6 @@ router = APIRouter()
 gifs_test_db = {
     "happycat": {
         "id": "0",
-        "tag": "happycat",
         "url": "https://tenor.com/bXAn9.gif"
     },
     "carla": {
