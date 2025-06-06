@@ -39,7 +39,6 @@ async def get_gif_by_tag(tag: str):
     gif = gifs_test_db.get(tag.lower())
 
     if not gif:  # no gif of the tag
-
         raise HTTPException(status_code=404, detail="GIF not found") 
     
     return gif 
