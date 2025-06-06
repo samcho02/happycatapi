@@ -23,7 +23,7 @@ class gif_service:
         Returns:
             dict: All database (dict withint dict).
         """
-        return self.db.values()
+        return list(self.db.values())
     
     def get_random_gif(self):
         """
