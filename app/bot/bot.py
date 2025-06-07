@@ -21,4 +21,21 @@ async def hello(interaction: discord.Interaction):
     except Exception as e:
         print(e)
 
+# TODO
+# @bot.tree.command(name="random")
+# async def random(interaction: discord.Interaction):
+#     # request /gifs/random in happycatapi 
+#     try:
+#         await interaction.response.send_message(file=...)
+#     except Exception as e:
+#         print(e)
+
+# @bot.tree.command(name="tag")
+# @app_commands.search_by_tag(tag="What should I say?")
+# async def say(interaction: discord.Interaction, tag:str):
+#     request /gifs/{tag} in happycatapi
+#     await interaction.response.send_message(f"{interaction.user.name} said `{arg}")
+
+# to add-on: send gif upon hearing a certain word (e.g. "happy" -> happycat, 😭 -> bananacat, huh -> huhcat)
+
 bot.run(TOKEN)
