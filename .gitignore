@@ -12,3 +12,6 @@ venv/
 
 # Ignore todo list
 TODO.md
+
+# Ignore .vscode folder
+.vscode
