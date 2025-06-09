@@ -1,5 +1,4 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI
 from fastapi.responses import PlainTextResponse
 from app.api.gif_routes import router as gif_router
 
