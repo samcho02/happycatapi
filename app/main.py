@@ -19,7 +19,7 @@ async def root(request: Request):
     # If request includes header, it must be text/plain or */* (any)
     accept = request.headers.get("accept")
     if accept and "text/plain" not in accept and "*/*" not in accept:
-        raise HTTPException(status_code=406, detail=f"Not Acceptable: Provided {accept}. Only text/plain is supported.")
+        raise HTTPException(status_code=406, detail=f'Not Acceptable: Accept header "{accept}" is not supported. Only "application/json" is allowed.')
     
     return welcome_msg
 
