@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Request, HTTPException
 from app.db.gifs_test_db import gifs_test_db
-from app.core.utils import gif_service
+from app.core.utils import gif_service, gif_new_service
 from app.schemas.gifs import *
 
 router = APIRouter()
-service = gif_service(gifs_test_db)
+# service = gif_service(gifs_test_db)
+service = gif_new_service()
 
 """Get multiple GIFs
 
