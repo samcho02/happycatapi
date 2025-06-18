@@ -1,4 +1,4 @@
-from bson import ObjectId
+from bson.objectid import ObjectId
 from typing import Optional, List
 from typing_extensions import Annotated
 from pydantic import ConfigDict, BaseModel, HttpUrl, Field
