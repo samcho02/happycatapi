@@ -11,6 +11,7 @@ class gif_service:
         
     All business logic for fetching data from the database.
     """
+    
     # def __init__(self, db: dict={}):
     def __init__(self, db: GIFcollection):
     # def __init__(self, collection: Collection):
@@ -18,15 +19,23 @@ class gif_service:
         Initialize service class with database.
 
         Args:
-            db (dict): Dictionary representing GIF database.
+            db (GIFcollection): database storing all GIFs.
             # collection (MongoDB Collection): Collection of GIF documents.
         """
-        self.db = db
         
-        self.name_dict = {}
+        self.db = db
+        self.name_map = {}
+        self.tag_map = {}
         
         for gif_item in db.gifs:
-            self.name_dict[gif_item.name] = gif_item
+            self.name_map[gif_item.name] = gif_item
+            
+            for tag in gif_item.tag:
+                if tag not in self.tag_map:
+                    self.tag_map[tag] = GIFcollection(gifs=[])
+                    
+                self.tag_map[tag].gifs.append(gif_item)
+        
         # self.collection : Collection[GIFmodel] = collection
 
     def get_all_gifs(self):
@@ -39,6 +48,7 @@ class gif_service:
             dict: All database (dict withint dict).
         #     (Cursor) : MongoDB Cursor to all GIF records
         """
+        
         # return list(self.db.values())
         
         return self.db
@@ -48,12 +58,13 @@ class gif_service:
     
     def get_random_gif(self):
         """
-        Returns a random gif's primary key.
+        Returns a random gif item.
 
         Returns:
             dict: Random choice of dictionary. 
             # (Cursor) : MongoDB Cursor to a random choice of GIF. 
         """
+        
         # return random.choice(list(self.db.values()))
         
         random_idx = random.randint(0, len(self.db.gifs)-1)
@@ -61,30 +72,73 @@ class gif_service:
     
         # return self.collection.aggregate([{"$sample": {"size": 1}}])
     
-    # def search_by_tag(self, tag: str):
     def search_by_name(self, name: str):
         """
         Searches for the gif with corresponding tag in database.
 
         Args:
-            tag (str): The tag to search for. 
-            # name (str): The name to search for. 
+            name (str): The name to search for. 
         
         Returns:
-            dict: Corresponding dictionary value, 
-                  None if the tag does not exist.
-            # gif (Cursor): MongoDB Cursor corresponding GIF record. 
-            
+            GIFmodel with the corresponding name.
+            # gif (Cursor): MongoDB Cursor corresponding GIF record.
+        
+        Raises:
+            HTTPException: Status code 404 (Not found) if none found.  
         """
+        
         # return self.db.get(tag.lower())
     
-        return self.name_dict.get(name)
+        if result := self.name_map.get(name):
+            return result
+
+        raise HTTPException(
+            status_code=404,
+            detail=f'GIF with name "{name}" not found'
+        )
+    
+        # gif = await self.collection.find_one({"_id": ObjectId(id)})
+        # return gif
+        
+    def search_by_tag(self, tag: str):
+        """
+        Searches for the gifs with corresponding tag in database.
+
+        Args:
+            tag (str): The tag to search for. 
+        
+        Returns:
+            GIFcollection: corresponding dictionary value.
+        
+        Raises:
+            HTTPException: Status code 404 (Not found) if none found.
+        """
+        
+        # return self.db.get(tag.lower())
+
+        if result := self.tag_map.get(tag):
+            return result
+        
+        raise HTTPException(
+            status_code=404,
+            detail=f'GIF with tag "{tag}" not found'
+        )
     
         # gif = await self.collection.find_one({"_id": ObjectId(id)})
         # return gif
     
     def check_header(self, request:Request, accepted:str):
-    # If request includes header, it must be text/plain or */* (any)
+        """Check if header includes acceptable media type.
+        If request includes header, it must be same as accepted or */* (any).
+
+        Args:
+            request (Request): incoming HTTP request
+            accepted (str): accepted media type
+
+        Raises:
+            HTTPException: Status code 406 (Not acceptable) if 
+        """
+    
         header = request.headers.get("accept")
         if header and accepted not in header and "*/*" not in header:
             raise HTTPException(

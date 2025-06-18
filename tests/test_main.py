@@ -47,7 +47,7 @@ class TestGetAll:
     def test_getall_rejects_invalid_accept(self, client, accept):
         response = client.get("/gifs/", headers={"accept": accept})
         assert response.status_code == 406
-
+        
 class TestGetRandom:
     """Tests for the /gifs/random endpoint."""
 
@@ -108,4 +108,29 @@ class TestGetByName:
     @pytest.mark.parametrize("accept", ["text/plain", "image/png"])
     def test_get_by_name_rejects_invalid_accept(self, client, accept):
         response = client.get("/gifs/oiia", headers={"accept": accept})
+        assert response.status_code == 406
+
+class TestGetByTag:
+    """Tests for the /gifs/ endpoint with tag parameter"""
+
+    @pytest.mark.parametrize("accept", [None, "*/*", "application/json"])
+    def test_get_by_tag_accepts_json(self, client, accept):
+        headers = {"accept": accept} if accept else {}
+        response = client.get("/gifs/?tag=happycat", headers=headers)
+        assert response.status_code == 200
+        assert isinstance(GIFcollection(**(response.json())), GIFcollection)
+    
+    def test_get_by_tag_nonexisting(self, client):
+        response = client.get("/gifs/?tag=uiia")
+        assert response.status_code == 404
+        assert response.json() == {"detail": 'GIF with tag "uiia" not found'}
+
+    @pytest.mark.parametrize("method", ["put", "post", "delete", "head", "patch"])
+    def test_get_by_tag_illegal_methods(self, client, method):
+        response = getattr(client, method)("/gifs/?tag=happycat")
+        assert response.status_code == 405
+
+    @pytest.mark.parametrize("accept", ["text/plain", "image/png"])
+    def test_get_by_tag_rejects_invalid_accept(self, client, accept):
+        response = client.get("/gifs/?tag=happycat", headers={"accept": accept})
         assert response.status_code == 406
