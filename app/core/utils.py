@@ -83,7 +83,7 @@ class gif_new_service:
         """
 
         # Make sure no duplicates
-        if await gifs_collection.find_one({"name":gif.name}):
+        if (await gifs_collection.find_one({"name":gif.name})) is not None:
             raise HTTPException(
                 status_code=400,
                 detail=f"Bad request: A GIF named {gif.name} already exists. Please try with another name."
@@ -108,13 +108,33 @@ class gif_new_service:
             k: v for k, v in gif.model_dump(by_alias=True, mode="json").items() if v is not None
         }
         
+        # Ensure no name duplicates
+        if "name" in gif:
+            if (duplicate_result := await gifs_collection.find_one({
+                "name":gif["name"], "_id": {"$ne": ObjectId(id)}
+            })) is not None:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Bad request: A GIF named {gif['name']} already exists. Please try with another name."
+                )
+        
+        # Ensure no url duplicates
+        if "url" in gif:
+            if (duplicate_result := await gifs_collection.find_one({
+                "url":gif["url"], "_id": {"$ne": ObjectId(id)}
+            })) is not None:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Bad request: URL is tied to another GIF (id={duplicate_result['_id']}). Please try another URL."
+                )
+        
         if len(gif) >= 1:
             update_result = await gifs_collection.find_one_and_update(
                 {"_id": ObjectId(id)},
                 {"$set": gif},
                 return_document=ReturnDocument.AFTER,
             )
-            if update_result:   # not None
+            if update_result is not None:
                 return update_result
             else:
                 raise HTTPException(status_code=404, detail=f"GIF {id} not found")
