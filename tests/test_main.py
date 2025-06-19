@@ -1,11 +1,15 @@
 import pytest
-from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
 from app.main import app, welcome_msg
 from app.schemas.gifs import GIFcollection
-from app.db.gifs_test_db import gifs_test_db
+
+import os
+from dotenv import load_dotenv
 
 pytestmark = pytest.mark.anyio
+
+load_dotenv()
+ADMIN_TOKEN = os.environ["ADMIN_TOKEN"]
 
 @pytest.fixture(scope="module")
 async def async_client():
@@ -150,3 +154,127 @@ class TestGetByTag:
     async def test_get_by_tag_rejects_invalid_accept(self, async_client, accept):
         response = await async_client.get("/gifs/?tag=happycat", headers={"accept": accept})
         assert response.status_code == 406
+
+@pytest.fixture(scope="module")
+async def created_gif_id(async_client):
+    payload = {"name": "testcat", "url": "https://tenor.com/bdKzXnPAcGB.gif", "tag": ["test"]}
+    headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+    response = await async_client.post("/gifs/", json=payload, headers=headers)
+    assert response.status_code == 201
+    assert response.json()["name"] == "testcat"
+    assert response.json()["tag"] == ["test"]
+    
+    return response.json()["id"]   # Store for other tests
+
+class TestAdd:
+    async def test_add_accepts_initial(self, created_gif_id):
+        # Make sure name=testcat doesn't exist in DB
+        assert created_gif_id is not None
+    
+    async def test_add_rejects_no_authentication(self, async_client):
+        payload = {"name": "test", "url": "https://tenor.com/h6lnHdUVixW.gif", "tag": ["test"]}
+        response = await async_client.post("/gifs/", json=payload)
+        assert response.status_code == 403  # While this really should be 401, it is a known Fast API bug under fix.
+    
+    async def test_add_rejects_no_authorization(self, async_client):
+        payload = {"name": "test", "url": "https://tenor.com/h6lnHdUVixW.gif", "tag": ["test"]}
+        headers = {"Authorization": f"Bearer clearlynotavalidtoken"}
+        response = await async_client.post("/gifs/", json=payload, headers=headers)
+        assert response.status_code == 403
+    
+    @pytest.mark.parametrize("accept", ["text/plain", "image/png"])
+    async def test_add_rejects_invalid_accept(self, async_client, accept):
+        payload = {"name": "test", "url": "https://tenor.com/h6lnHdUVixW.gif", "tag": ["test"]}
+        headers = {"Authorization": f"Bearer {ADMIN_TOKEN}", "accept": accept}
+        response = await async_client.post("/gifs/", json=payload, headers=headers)
+        assert response.status_code == 406
+    
+    async def test_add_rejects_duplicate_name(self, async_client):
+        payload = {"name": "testcat", "url": "https://tenor.com/bdKzXnPAcGB.gif", "tag": ["test"]}
+        headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+        response = await async_client.post("/gifs/", json=payload, headers=headers)
+        assert response.status_code == 409
+        assert response.json()["detail"] == "Conflict: A GIF named testcat already exists."
+    
+    async def test_add_rejects_duplicate_url(self, async_client, created_gif_id):
+        payload = {"name": "test", "url": "https://tenor.com/bdKzXnPAcGB.gif", "tag": ["test"]}
+        headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+        response = await async_client.post("/gifs/", json=payload, headers=headers)
+        assert response.status_code == 409
+        assert response.json()["detail"] == f"Conflict: URL is tied to another GIF (id={created_gif_id})."
+    
+    async def test_add_rejects_missing_tag(self, async_client):
+        payload = {"name": "test", "url": "https://tenor.com/h6lnHdUVixW.gif"}
+        headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+        response = await async_client.post("/gifs/", json=payload, headers=headers)
+        assert response.status_code == 422
+        
+    async def test_add_rejects_invalid_url(self, async_client):
+        payload = {"name": "test", "url": "", "tag": []}
+        headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+        response = await async_client.post("/gifs/", json=payload, headers=headers)
+        assert response.status_code == 422
+    
+    """
+    Fail: Add a GIF without authentication
+    - Omit the token or use an invalid token.
+    - Assert 403 Forbidden or 401 Unauthorized.
+    
+    Fail: Add a GIF with duplicate name or URL
+    - Add a GIF with a name or URL that already exists.
+    - Assert 409 Conflict or your chosen error code/message.
+    
+    Fail: Add a GIF with missing required fields
+    - Omit required fields (e.g., name, url).
+    - Assert 422 Unprocessable Entity.
+    
+    Fail: Add a GIF with invalid URL format
+    - Use an invalid URL in the payload.
+    - Assert 422 Unprocessable Entity.
+    """
+
+class TestUpdate:
+    """
+    Success: Update an existing GIF (with valid token)
+    - Send a valid update payload and a valid token for an existing GIF ID.
+    - Assert 200 OK and response reflects the update.
+
+    Fail: Update a non-existing GIF
+    - Use a valid token and a non-existent ID.
+    - Assert 404 Not Found.
+
+    Fail: Update with invalid or missing fields
+    - Send an invalid payload (e.g., missing required fields).
+    - Assert 422 Unprocessable Entity.
+
+    Fail: Update with duplicate name or URL
+    - Try to update a GIF to a name or URL that already exists for another GIF.
+    - Assert 409 Conflict or your chosen error code/message.
+
+    Fail: Update without authentication
+    - Omit the token or use an invalid token.
+    - Assert 403 Forbidden or 401 Unauthorized.
+
+    Fail: Update with invalid ID format
+    - Use an invalid ID (not a valid ObjectId).
+    - Assert 422 Unprocessable Entity or 400 Bad Request.
+    """
+    
+class TestDelete:
+    """
+    Success: Delete an existing GIF (with valid token)
+    - Send a valid delete payload and a valid token for an existing GIF ID.
+    - Assert 204 No Content.
+        
+    Fail: Delete a non-existing GIF
+    - Use a valid token and a non-existent ID.
+    - Assert 404 Not Found.
+
+    Fail: Update without authentication
+    - Omit the token or use an invalid token.
+    - Assert 403 Forbidden or 401 Unauthorized.
+    
+    Fail: Update with invalid ID format
+    - Use an invalid ID (not a valid ObjectId).
+    - Assert 422 Unprocessable Entity or 400 Bad Request.
+    """
