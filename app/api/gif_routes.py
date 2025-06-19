@@ -52,7 +52,7 @@ async def get_gif_by_name(name: str, request: Request):
 
 
 # Methods with restricted access
-
+"""Add a GIF"""
 @router.post("/",
     response_description="Add new GIF",
     response_model=GIFmodel,
@@ -64,6 +64,7 @@ async def add_new_gif(request: Request, gif: GIFmodel = Body(...)):
     service.check_header(request, "application/json")
     return await service.add_new_gif(gif)
 
+"""Update a GIF"""
 @router.put(
     "/{id}",
     response_description="Update a GIF",
@@ -76,3 +77,13 @@ async def update_gif(request: Request, id: str, gif: Optional[UpdateGIFmodel] = 
     service.check_id(id)
     service.check_body(gif)
     return await service.update_gif(id, gif)
+
+"""Delete a GIF"""
+@router.delete(
+    "/{id}",
+    response_description="Delete a GIF",
+    dependencies=[Depends(verify_token)]
+)
+async def update_gif(id: str):
+    service.check_id(id)
+    return await service.delete_gif(id)

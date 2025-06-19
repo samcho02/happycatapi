@@ -71,8 +71,12 @@ class TestGetRandom:
         response = await async_client.get("/gifs/random", headers=headers)
         assert response.status_code == 200
         assert isinstance(response.json(), dict)
+        
+    async def test_random_rejects_override(self, async_client):
+        response = await async_client.put("/gifs/random")
+        assert response.status_code == 403
 
-    @pytest.mark.parametrize("method", ["put", "post", "delete", "head", "patch"])
+    @pytest.mark.parametrize("method", ["post", "delete", "head", "patch"])
     async def test_random_illegal_methods(self, async_client, method):
         response = await getattr(async_client, method)("/gifs/random")
         assert response.status_code == 405
@@ -98,6 +102,10 @@ class TestGetByName:
         response = await async_client.get("/gifs/oiia", headers=headers)
         assert response.status_code == 200
         assert response.json() == self.oiia_response
+    
+    async def test_get_by_name_rejects_override(self, async_client):
+        response = await async_client.put("/gifs/oiia")
+        assert response.status_code == 403
         
     async def test_get_by_name_nonexisting(self, async_client):
         response = await async_client.get("/gifs/uiia")
@@ -113,10 +121,6 @@ class TestGetByName:
     async def test_get_by_name_rejects_invalid_accept(self, async_client, accept):
         response = await async_client.get("/gifs/oiia", headers={"accept": accept})
         assert response.status_code == 406
-    
-    async def test_get_by_name_overrides(self, async_client):
-        response = await async_client.put("/gifs/oiia")
-        assert response.status_code == 422
 
 class TestGetByTag:
     """Tests for the /gifs/ endpoint with tag parameter"""
@@ -127,6 +131,10 @@ class TestGetByTag:
         response = await async_client.get("/gifs/?tag=happycat", headers=headers)
         assert response.status_code == 200
         assert isinstance(GIFcollection(**(response.json())), GIFcollection)
+
+    async def test_get_by_tag_rejects_override(self, async_client):
+        response = await async_client.post("/gifs/?tag=happycat")
+        assert response.status_code == 403
     
     async def test_get_by_tag_nonexisting(self, async_client):
         response = await async_client.get("/gifs/?tag=uiia")
@@ -142,7 +150,3 @@ class TestGetByTag:
     async def test_get_by_tag_rejects_invalid_accept(self, async_client, accept):
         response = await async_client.get("/gifs/?tag=happycat", headers={"accept": accept})
         assert response.status_code == 406
-
-    async def test_get_by_tag_rejects_override(self, async_client):
-        response = await async_client.post("/gifs/?tag=happycat")
-        assert response.status_code == 422

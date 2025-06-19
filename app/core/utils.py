@@ -1,5 +1,5 @@
 import random
-from fastapi import Request, HTTPException, Body
+from fastapi import Request, HTTPException, Response, Body, status
 from pymongo import ReturnDocument
 from pymongo.collection import Collection
 from app.schemas.gifs import *
@@ -85,8 +85,8 @@ class gif_new_service:
         # Make sure no duplicates
         if (await gifs_collection.find_one({"name":gif.name})) is not None:
             raise HTTPException(
-                status_code=400,
-                detail=f"Bad request: A GIF named {gif.name} already exists. Please try with another name."
+                status_code=409,
+                detail=f"Conflict: A GIF named {gif.name} already exists. Please try with another name."
             )
                 
         new_gif = await gifs_collection.insert_one(
@@ -114,8 +114,8 @@ class gif_new_service:
                 "name":gif["name"], "_id": {"$ne": ObjectId(id)}
             })) is not None:
                 raise HTTPException(
-                    status_code=400,
-                    detail=f"Bad request: A GIF named {gif['name']} already exists. Please try with another name."
+                    status_code=409,
+                    detail=f"Conflict: A GIF named {gif['name']} already exists. Please try with another name."
                 )
         
         # Ensure no url duplicates
@@ -124,8 +124,8 @@ class gif_new_service:
                 "url":gif["url"], "_id": {"$ne": ObjectId(id)}
             })) is not None:
                 raise HTTPException(
-                    status_code=400,
-                    detail=f"Bad request: URL is tied to another GIF (id={duplicate_result['_id']}). Please try another URL."
+                    status_code=409,
+                    detail=f"Conflict: URL is tied to another GIF (id={duplicate_result['_id']}). Please try another URL."
                 )
         
         if len(gif) >= 1:
@@ -142,6 +142,17 @@ class gif_new_service:
         # The update is empty, but we should still return the matching document:
         if existing_student := await gifs_collection.find_one({"_id": id}):
             return existing_student
+        raise HTTPException(status_code=404, detail=f"GIF {id} not found")
+    
+    async def delete_gif(self, id: str):
+        """
+        Remove a single student record from the database.
+        """
+        
+        delete_result = await gifs_collection.delete_one({"_id": ObjectId(id)})
+        if delete_result.deleted_count == 1:
+            return Response(status_code=status.HTTP_204_NO_CONTENT)
+        
         raise HTTPException(status_code=404, detail=f"GIF {id} not found")
     
     def check_header(self, request:Request, accepted:str):
@@ -197,148 +208,3 @@ class gif_new_service:
                 status_code=422,
                 detail="Request body required"
             )
-  
-class gif_service:
-    """
-    Service class for managing cat gif data.
-        
-    All business logic for fetching data from the database.
-    """
-    
-    # def __init__(self, db: dict={}):
-    def __init__(self, db: GIFcollection):
-    # def __init__(self, collection: Collection):
-        """
-        Initialize service class with database.
-
-        Args:
-            db (GIFcollection): database storing all GIFs.
-            # collection (MongoDB Collection): Collection of GIF documents.
-        """
-        
-        self.db = db
-        self.name_map = {}
-        self.tag_map = {}
-        
-        for gif_item in db.gifs:
-            self.name_map[gif_item.name] = gif_item
-            
-            for tag in gif_item.tag:
-                if tag not in self.tag_map:
-                    self.tag_map[tag] = GIFcollection(gifs=[])
-                    
-                self.tag_map[tag].gifs.append(gif_item)
-        
-        # self.collection : Collection[GIFmodel] = collection
-
-    def get_all_gifs(self):
-        """
-        Returns all gifs in database.
-        # The response is unpaginated and limited to 1000 results.
-        # TODO - Use skip and limit parameters instead of batch size
-
-        Returns:
-            dict: All database (dict withint dict).
-        #     (Cursor) : MongoDB Cursor to all GIF records
-        """
-        
-        # return list(self.db.values())
-        
-        return self.db
-        
-        # gifs = await self.collection.find().to_list(1000)
-        # return GIFcollection(gifs)
-    
-    def get_random_gif(self):
-        """
-        Returns a random gif item.
-
-        Returns:
-            dict: Random choice of dictionary. 
-            # (Cursor) : MongoDB Cursor to a random choice of GIF. 
-        """
-        
-        # return random.choice(list(self.db.values()))
-        
-        random_idx = random.randint(0, len(self.db.gifs)-1)
-        return self.db.gifs[random_idx]
-    
-        # return self.collection.aggregate([{"$sample": {"size": 1}}])
-    
-    def search_by_name(self, name: str):
-        """
-        Searches for the gif with corresponding tag in database.
-
-        Args:
-            name (str): The name to search for. 
-        
-        Returns:
-            GIFmodel with the corresponding name.
-            # gif (Cursor): MongoDB Cursor corresponding GIF record.
-        
-        Raises:
-            HTTPException: Status code 404 (Not found) if none found.  
-        """
-        
-        # return self.db.get(tag.lower())
-    
-        if result := self.name_map.get(name):
-            return result
-
-        raise HTTPException(
-            status_code=404,
-            detail=f'GIF with name "{name}" not found'
-        )
-    
-        # gif = await self.collection.find_one({"_id": ObjectId(id)})
-        # return gif
-        
-    def search_by_tag(self, tag: str):
-        """
-        Searches for the gifs with corresponding tag in database.
-
-        Args:
-            tag (str): The tag to search for. 
-        
-        Returns:
-            GIFcollection: corresponding dictionary value.
-        
-        Raises:
-            HTTPException: Status code 404 (Not found) if none found.
-        """
-        
-        # return self.db.get(tag.lower())
-
-        if result := self.tag_map.get(tag):
-            return result
-        
-        raise HTTPException(
-            status_code=404,
-            detail=f'GIF with tag "{tag}" not found'
-        )
-    
-        # gif = await self.collection.find_one({"_id": ObjectId(id)})
-        # return gif
-    
-    def check_header(self, request:Request, accepted:str):
-        """Check if header includes acceptable media type.
-        If request includes header, it must be same as accepted or */* (any).
-
-        Args:
-            request (Request): incoming HTTP request
-            accepted (str): accepted media type
-
-        Raises:
-            HTTPException: Status code 406 (Not acceptable) if 
-        """
-    
-        header = request.headers.get("accept")
-        if header and accepted not in header and "*/*" not in header:
-            raise HTTPException(
-                status_code=406,
-                detail=(
-                    f'Not Acceptable: Accept header "{header}" is not supported. '
-                    f'Only "{accepted}" is allowed.'
-                )
-            )
-            
