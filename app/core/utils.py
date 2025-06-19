@@ -1,8 +1,8 @@
 import random
-from fastapi import Request, HTTPException
-from app.schemas.gifs import *
+from fastapi import Request, HTTPException, Body
+from pymongo import ReturnDocument
 from pymongo.collection import Collection
-from app.schemas.gifs import GIFcollection, GIFmodel
+from app.schemas.gifs import *
 from app.db.gifs_db import gifs_collection
 
 class gif_new_service:
@@ -19,8 +19,7 @@ class gif_new_service:
         Returns:
             GIFcollection: contains all GIF items
         """
-        
-        return GIFcollection(gifs=await gifs_collection.find())
+        return GIFcollection(gifs=await gifs_collection.find().to_list())
     
     async def get_random_gif(self):
         """
@@ -29,8 +28,9 @@ class gif_new_service:
         Returns:
             GIFmodel : a random choice of GIF
         """
-    
-        return await gifs_collection.aggregate([{"$sample": {"size": 1}}])
+        cursor = await gifs_collection.aggregate([{"$sample": {"size": 1}}])
+        docs = await cursor.to_list(length=1)
+        return GIFmodel(**docs[0])
     
     async def search_by_name(self, name: str):
         """
@@ -68,13 +68,61 @@ class gif_new_service:
             HTTPException: Status code 404 (Not found) if none found.
         """
 
-        if result := await gifs_collection.find({"tags": {"$in": [tag]}}):
+        if result := await gifs_collection.find({"tag": {"$in": [tag]}}).to_list():
             return GIFcollection(gifs=result)
         
         raise HTTPException(
             status_code=404,
             detail=f'GIF with tag "{tag}" not found'
         )
+    
+    async def add_new_gif(self, gif: GIFmodel = Body(...)):
+        """
+        Insert a new GIF item.
+        A unique `id` will be created and provided in the response.
+        """
+
+        # Make sure no duplicates
+        if await gifs_collection.find_one({"name":gif.name}):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Bad request: A GIF named {gif.name} already exists. Please try with another name."
+            )
+                
+        new_gif = await gifs_collection.insert_one(
+            gif.model_dump(by_alias=True, exclude=["id"], mode="json")
+        )
+        created_gif = await gifs_collection.find_one(
+            {"_id": new_gif.inserted_id}
+        )
+        
+        return created_gif
+
+    async def update_gif(self, id: str, gif: UpdateGIFmodel = Body(...)):
+        """
+        Update individual fields of an existing GIF item.
+        Only the provided fields will be updated.
+        Any missing or `null` fields will be ignored.
+        """
+        gif = {
+            k: v for k, v in gif.model_dump(by_alias=True, mode="json").items() if v is not None
+        }
+        
+        if len(gif) >= 1:
+            update_result = await gifs_collection.find_one_and_update(
+                {"_id": ObjectId(id)},
+                {"$set": gif},
+                return_document=ReturnDocument.AFTER,
+            )
+            if update_result:   # not None
+                return update_result
+            else:
+                raise HTTPException(status_code=404, detail=f"GIF {id} not found")
+        
+        # The update is empty, but we should still return the matching document:
+        if existing_student := await gifs_collection.find_one({"_id": id}):
+            return existing_student
+        raise HTTPException(status_code=404, detail=f"GIF {id} not found")
     
     def check_header(self, request:Request, accepted:str):
         """Check if header includes acceptable media type.
@@ -96,6 +144,38 @@ class gif_new_service:
                     f'Not Acceptable: Accept header "{header}" is not supported. '
                     f'Only "{accepted}" is allowed.'
                 )
+            )
+    
+    def check_id(self, id: str):
+        if id == "random":
+            raise HTTPException(
+                status_code=405,
+                detail='Method Not Allowed'
+            )
+            
+        if len(id) != 24:   # ObjectId in must be a single string of 12 bytes or a string of 24 hex characters
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f'Bad request: {id} is not a valid ID.'
+                )
+            )
+        
+        try:
+            int(id, 16)
+        except:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f'Bad request: {id} is not a valid ID.'
+                )
+            )
+    
+    def check_body(self, body : UpdateGIFmodel | None):
+        if body is None:
+            raise HTTPException(
+                status_code=422,
+                detail="Request body required"
             )
   
 class gif_service:
