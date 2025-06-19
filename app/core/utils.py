@@ -48,7 +48,7 @@ class gif_new_service:
             return result
         
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'GIF with name "{name}" not found'
         )
         
@@ -70,7 +70,7 @@ class gif_new_service:
             return GIFcollection(gifs=result)
         
         raise HTTPException(
-            status_code=404,
+            status_code=status.HTTP_404_NOT_FOUND,
             detail=f'GIF with tag "{tag}" not found'
         )
     
@@ -112,12 +112,12 @@ class gif_new_service:
             if update_result is not None:
                 return update_result
             else:
-                raise HTTPException(status_code=404, detail=f"GIF {id} not found")
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"GIF {id} not found")
         
         # The update is empty, but we should still return the matching document:
         if existing_student := await gifs_collection.find_one({"_id": id}):
             return existing_student
-        raise HTTPException(status_code=404, detail=f"GIF {id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"GIF {id} not found")
     
     async def delete_gif(self, id: str):
         """
@@ -128,7 +128,7 @@ class gif_new_service:
         if delete_result.deleted_count == 1:
             return Response(status_code=status.HTTP_204_NO_CONTENT)
         
-        raise HTTPException(status_code=404, detail=f"GIF {id} not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"GIF {id} not found")
     
     def check_header(self, request:Request, accepted:str):
         """Check if header includes acceptable media type.
@@ -145,7 +145,7 @@ class gif_new_service:
         header = request.headers.get("accept")
         if header and accepted not in header and "*/*" not in header:
             raise HTTPException(
-                status_code=406,
+                status_code=status.HTTP_406_NOT_ACCEPTABLE,
                 detail=(
                     f'Not Acceptable: Accept header "{header}" is not supported. '
                     f'Only "{accepted}" is allowed.'
@@ -155,13 +155,13 @@ class gif_new_service:
     def check_id(self, id: str):
         if id == "random":
             raise HTTPException(
-                status_code=405,
+                status_code=status.HTTP_405_METHOD_NOT_ALLOWED,
                 detail='Method Not Allowed'
             )
             
         if len(id) != 24:   # ObjectId in must be a single string of 12 bytes or a string of 24 hex characters
             raise HTTPException(
-                status_code=422,
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=(
                     f'Bad request: {id} is not a valid ID.'
                 )
@@ -171,7 +171,7 @@ class gif_new_service:
             int(id, 16)
         except:
             raise HTTPException(
-                status_code=422,
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail=(
                     f'Bad request: {id} is not a valid ID.'
                 )
@@ -180,7 +180,7 @@ class gif_new_service:
     def check_body(self, body : UpdateGIFmodel | None):
         if body is None:
             raise HTTPException(
-                status_code=422,
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="Request body required"
             )
 
@@ -193,7 +193,7 @@ class gif_new_service:
             
             if (duplicate_result := await gifs_collection.find_one(query)) is not None:
                 raise HTTPException(
-                    status_code=409,
+                    status_code=status.HTTP_409_CONFLICT,
                     detail=f"Conflict: A GIF named {name} already exists."
                 )
 
@@ -205,6 +205,6 @@ class gif_new_service:
                 
             if (duplicate_result := await gifs_collection.find_one(query)) is not None:
                 raise HTTPException(
-                    status_code=409,
+                    status_code=status.HTTP_409_CONFLICT,
                     detail=f"Conflict: URL is tied to another GIF (id={duplicate_result['_id']})."
                 )

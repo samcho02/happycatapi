@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, HTTPException, status, Body, Depends
+from fastapi import APIRouter, Request, status, Body, Depends
 from app.core.dependencies import verify_token
 from app.core.utils import gif_new_service
 from app.schemas.gifs import *

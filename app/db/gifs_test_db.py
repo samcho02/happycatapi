@@ -60,7 +60,7 @@ gifs_dict = {
     "bananacatcry": {
         "id": "11",
         "tag": ["bananacatcry"],
-        "url": "https://tenor.com/bpwiu.gif"
+        "url": "https://tenor.com/uUhePVdfBcm.gif"
     },
     "bananacatwalk": {
         "id": "12",
