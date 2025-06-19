@@ -1,7 +1,5 @@
-import random
 from fastapi import Request, HTTPException, Response, Body, status
 from pymongo import ReturnDocument
-from pymongo.collection import Collection
 from app.schemas.gifs import *
 from app.db.gifs_db import gifs_collection
 
@@ -81,13 +79,8 @@ class gif_new_service:
         Insert a new GIF item.
         A unique `id` will be created and provided in the response.
         """
-
-        # Make sure no duplicates
-        if (await gifs_collection.find_one({"name":gif.name})) is not None:
-            raise HTTPException(
-                status_code=409,
-                detail=f"Conflict: A GIF named {gif.name} already exists. Please try with another name."
-            )
+        
+        await self.check_duplicate(None, gif.name, gif.url)
                 
         new_gif = await gifs_collection.insert_one(
             gif.model_dump(by_alias=True, exclude=["id"], mode="json")
@@ -108,25 +101,7 @@ class gif_new_service:
             k: v for k, v in gif.model_dump(by_alias=True, mode="json").items() if v is not None
         }
         
-        # Ensure no name duplicates
-        if "name" in gif:
-            if (duplicate_result := await gifs_collection.find_one({
-                "name":gif["name"], "_id": {"$ne": ObjectId(id)}
-            })) is not None:
-                raise HTTPException(
-                    status_code=409,
-                    detail=f"Conflict: A GIF named {gif['name']} already exists. Please try with another name."
-                )
-        
-        # Ensure no url duplicates
-        if "url" in gif:
-            if (duplicate_result := await gifs_collection.find_one({
-                "url":gif["url"], "_id": {"$ne": ObjectId(id)}
-            })) is not None:
-                raise HTTPException(
-                    status_code=409,
-                    detail=f"Conflict: URL is tied to another GIF (id={duplicate_result['_id']}). Please try another URL."
-                )
+        self.check_duplicate(id, gif.get("url"), gif.get("name"))
         
         if len(gif) >= 1:
             update_result = await gifs_collection.find_one_and_update(
@@ -208,3 +183,28 @@ class gif_new_service:
                 status_code=422,
                 detail="Request body required"
             )
+
+    async def check_duplicate(self, id: str = None, name : str = None, url : str = None):
+        # Ensure no name duplicates
+        if name is not None:
+            query = {"name":name}
+            if id is not None:
+                query["_id"] = {"$ne": ObjectId(id)}
+            
+            if (duplicate_result := await gifs_collection.find_one(query)) is not None:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Conflict: A GIF named {name} already exists."
+                )
+
+        # Ensure no url duplicates
+        if url is not None:
+            query = {"url":str(url)}
+            if id is not None:
+                query["_id"] = {"$ne": ObjectId(id)}
+                
+            if (duplicate_result := await gifs_collection.find_one(query)) is not None:
+                raise HTTPException(
+                    status_code=409,
+                    detail=f"Conflict: URL is tied to another GIF (id={duplicate_result['_id']})."
+                )
