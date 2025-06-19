@@ -77,11 +77,12 @@ class TestGetRandom:
         assert response.status_code == status.HTTP_200_OK
         assert isinstance(response.json(), dict)
         
-    async def test_random_rejects_override(self, async_client):
+    @pytest.mark.parametrize("method", ["put", "delete"])
+    async def test_random_rejects_override(self, async_client, method):
         response = await getattr(async_client, method)("/gifs/random")
         assert response.status_code == status.HTTP_403_FORBIDDEN
 
-    @pytest.mark.parametrize("method", ["post", "delete", "head", "patch"])
+    @pytest.mark.parametrize("method", ["post", "head", "patch"])
     async def test_random_illegal_methods(self, async_client, method):
         response = await getattr(async_client, method)("/gifs/random")
         assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
@@ -108,7 +109,8 @@ class TestGetByName:
         assert response.status_code == status.HTTP_200_OK
         assert response.json() == self.oiia_response
     
-    async def test_get_by_name_rejects_override(self, async_client):
+    @pytest.mark.parametrize("method", ["put", "delete"])
+    async def test_get_by_name_rejects_override(self, async_client, method):
         response = await getattr(async_client, method)("/gifs/oiia")
         assert response.status_code == status.HTTP_403_FORBIDDEN
         
@@ -117,7 +119,7 @@ class TestGetByName:
         assert response.status_code == status.HTTP_404_NOT_FOUND
         assert response.json() == {"detail": 'GIF with name "uiia" not found'}
 
-    @pytest.mark.parametrize("method", ["post", "delete", "head", "patch"])
+    @pytest.mark.parametrize("method", ["post", "head", "patch"])
     async def test_get_by_name_illegal_methods(self, async_client, method):
         response = await getattr(async_client, method)("/gifs/oiia")
         assert response.status_code == status.HTTP_405_METHOD_NOT_ALLOWED
