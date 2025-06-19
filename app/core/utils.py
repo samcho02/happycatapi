@@ -76,54 +76,6 @@ class gif_new_service:
             detail=f'GIF with tag "{tag}" not found'
         )
     
-    async def add_new_gif(self, gif: GIFmodel = Body(...)):
-        """
-        Insert a new GIF item.
-        A unique `id` will be created and provided in the response.
-        """
-
-        # Make sure no duplicates
-        if await gifs_collection.find_one({"name":gif.name}):
-            raise HTTPException(
-                status_code=400,
-                detail=f"Bad request: A GIF named {gif.name} already exists. Please try with another name."
-            )
-                
-        new_gif = await gifs_collection.insert_one(
-            gif.model_dump(by_alias=True, exclude=["id"], mode="json")
-        )
-        created_gif = await gifs_collection.find_one(
-            {"_id": new_gif.inserted_id}
-        )
-        
-        return created_gif
-
-    async def update_gif(self, id: str, gif: UpdateGIFmodel = Body(...)):
-        """
-        Update individual fields of an existing GIF item.
-        Only the provided fields will be updated.
-        Any missing or `null` fields will be ignored.
-        """
-        gif = {
-            k: v for k, v in gif.model_dump(by_alias=True, mode="json").items() if v is not None
-        }
-        
-        if len(gif) >= 1:
-            update_result = await gifs_collection.find_one_and_update(
-                {"_id": ObjectId(id)},
-                {"$set": gif},
-                return_document=ReturnDocument.AFTER,
-            )
-            if update_result:   # not None
-                return update_result
-            else:
-                raise HTTPException(status_code=404, detail=f"GIF {id} not found")
-        
-        # The update is empty, but we should still return the matching document:
-        if existing_student := await gifs_collection.find_one({"_id": id}):
-            return existing_student
-        raise HTTPException(status_code=404, detail=f"GIF {id} not found")
-    
     def check_header(self, request:Request, accepted:str):
         """Check if header includes acceptable media type.
         If request includes header, it must be same as accepted or */* (any).

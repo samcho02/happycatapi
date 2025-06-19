@@ -104,7 +104,7 @@ class TestGetByName:
         assert response.status_code == 404
         assert response.json() == {"detail": 'GIF with name "uiia" not found'}
 
-    @pytest.mark.parametrize("method", ["post", "delete", "head", "patch"])
+    @pytest.mark.parametrize("method", ["put", "post", "delete", "head", "patch"])
     async def test_get_by_name_illegal_methods(self, async_client, method):
         response = await getattr(async_client, method)("/gifs/oiia")
         assert response.status_code == 405
@@ -113,10 +113,6 @@ class TestGetByName:
     async def test_get_by_name_rejects_invalid_accept(self, async_client, accept):
         response = await async_client.get("/gifs/oiia", headers={"accept": accept})
         assert response.status_code == 406
-    
-    async def test_get_by_name_overrides(self, async_client):
-        response = await async_client.put("/gifs/oiia")
-        assert response.status_code == 422
 
 class TestGetByTag:
     """Tests for the /gifs/ endpoint with tag parameter"""
@@ -133,7 +129,7 @@ class TestGetByTag:
         assert response.status_code == 404
         assert response.json() == {"detail": 'GIF with tag "uiia" not found'}
 
-    @pytest.mark.parametrize("method", ["put", "delete", "head", "patch"])
+    @pytest.mark.parametrize("method", ["put", "post", "delete", "head", "patch"])
     async def test_get_by_tag_illegal_methods(self, async_client, method):
         response = await getattr(async_client, method)("/gifs/?tag=happycat")
         assert response.status_code == 405
@@ -142,7 +138,3 @@ class TestGetByTag:
     async def test_get_by_tag_rejects_invalid_accept(self, async_client, accept):
         response = await async_client.get("/gifs/?tag=happycat", headers={"accept": accept})
         assert response.status_code == 406
-
-    async def test_get_by_tag_rejects_override(self, async_client):
-        response = await async_client.post("/gifs/?tag=happycat")
-        assert response.status_code == 422

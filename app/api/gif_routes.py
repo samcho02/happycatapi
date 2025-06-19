@@ -49,28 +49,3 @@ async def get_random_gif(request:Request):
 async def get_gif_by_name(name: str, request: Request):
     service.check_header(request, "application/json")
     return await service.search_by_name(name)
-
-
-# Methods with restricted access
-
-@router.post("/",
-    response_description="Add new GIF",
-    response_model=GIFmodel,
-    status_code=status.HTTP_201_CREATED,
-    response_model_by_alias=False,
-)
-async def add_new_gif(request: Request, gif: GIFmodel = Body(...)):
-    service.check_header(request, "application/json")
-    return await service.add_new_gif(gif)
-
-@router.put(
-    "/{id}",
-    response_description="Update a GIF",
-    response_model=GIFmodel,
-    response_model_by_alias=False,
-)
-async def update_gif(request: Request, id: str, gif: Optional[UpdateGIFmodel] = Body(default=None)):
-    service.check_header(request, "application/json")
-    service.check_id(id)
-    service.check_body(gif)
-    return await service.update_gif(id, gif)
