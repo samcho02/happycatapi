@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Request, HTTPException, status, Body
-from app.db.gifs_test_db import gifs_test_db
+from fastapi import APIRouter, Request, HTTPException, status, Body, Depends
+from app.core.dependencies import verify_token
 from app.core.utils import gif_new_service
 from app.schemas.gifs import *
 
@@ -58,6 +58,7 @@ async def get_gif_by_name(name: str, request: Request):
     response_model=GIFmodel,
     status_code=status.HTTP_201_CREATED,
     response_model_by_alias=False,
+    dependencies=[Depends(verify_token)]
 )
 async def add_new_gif(request: Request, gif: GIFmodel = Body(...)):
     service.check_header(request, "application/json")
@@ -68,6 +69,7 @@ async def add_new_gif(request: Request, gif: GIFmodel = Body(...)):
     response_description="Update a GIF",
     response_model=GIFmodel,
     response_model_by_alias=False,
+    dependencies=[Depends(verify_token)]
 )
 async def update_gif(request: Request, id: str, gif: Optional[UpdateGIFmodel] = Body(default=None)):
     service.check_header(request, "application/json")
