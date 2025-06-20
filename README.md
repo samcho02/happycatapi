@@ -1,19 +1,193 @@
-# Internet Famous Cats API
-API of internet famous cats 
+# Happy Cat API
+
+Welcome to the **Happy Cat API**, your source for internet-famous cat GIFs! Brighten your day or your app with the world’s most beloved feline memes.
+
+![Jumping happy cat](https://tenor.com/bXAn9.gif)
 
 ## Technology Stack
-- **Python**
-- **Uvicorn** - ASGI server to run FastAPI
-- **Pydanti** - Data validation
-- **MongoDB** - To store GIF metadata (title, tags, URL)
-- **Local Storage** - Storing actual GIFs (or links from Giphy)
 
-## MVP Features
-- **`GET /gifs`** - Retrieve a list of all cat GIF meme alias 
-- **`GET /gifs/random`** - Retrieve a random cat GIF meme 
-- **`GET /gifs/{tag}`** - Retrieve details of a specific cat GIF meme  
+- **Python** & **FastAPI** — Modern, async web framework
+- **Uvicorn** — ASGI server for FastAPI
+- **Pydantic** — Data validation and serialization
+- **MongoDB** — Stores GIF metadata (title, tags, URL)
+- **Pytest** — Automated testing (75+ test cases)
 
-**For authorized users only**
-- **`POST /gifs`** - Upload a new cat GIF meme (via file upload or URL)  
-- **`PUT /gifs/{id}`** - Update metadata of a specific GIF meme  
-- **`DELETE /gifs/{id}`** - Delete a specific GIF meme from the collection
+## Endpoints
+
+### Public Endpoints
+
+#### `GET /gifs` - Retrieve a list of all cat GIF memes.
+
+**Query Parameters:**\
+`tag` (optional): Filter GIFs by tag.
+
+```bash
+$ curl -H "accept: application/json" https://happycatapi.onrender.com/gifs/
+
+{
+  "gifs": [
+    {
+      "id": "68533837cfec18989367b60b",
+      "name": "happycat",
+      "url": "https://tenor.com/bXAn9.gif",
+      "tag": [
+        "happy",
+        "tabby",
+        "happycat"
+      ]
+    },
+    {
+      "id": "685343594050c9b94faa4359",
+      "name": "oiia",
+      "url": "https://tenor.com/fFr2do9u7Kw.gif",
+      "tag": [
+        "oiia"
+      ]
+    },
+    ...
+  ]
+}
+```
+
+#### `GET /gifs/random` - Retrieve a random cat GIF meme.
+
+```bash
+$ curl -H "accept: application/json" https://happycatapi.onrender.com/gifs/random
+
+{
+  "id": "685382d38bf9e1317117dd96",
+  "name": "huhcat",
+  "url": "https://tenor.com/sqMU1WMDcgD.gif",
+  "tag": [
+    "huhcat"
+  ]
+}
+```
+
+#### `GET /gifs/{name}` - Retrieve details of a specific cat GIF meme by name.
+
+```bash
+$ curl -H "accept: application/json" https://happycatapi.onrender.com/gifs/chipichipi
+
+   {
+      "id": "685382d48bf9e1317117dd97",
+      "name": "chipichipi",
+      "url": "https://tenor.com/dpqqxee0PFw.gif",
+      "tag": [
+        "chipichipi"
+      ]
+    }
+```
+
+---
+
+### Restricted Endpoints (Require [Authentication](#Authentication))
+
+> **Note:** To access these endpoints, include an `Authorization: Bearer <ADMIN_TOKEN>` header.
+
+#### `POST /gifs` - Upload a new cat GIF meme.
+
+**Body Example:**
+
+```json
+{
+  "name": "happycat",
+  "url": "https://tenor.com/bXAn9.gif",
+  "tag": ["happy", "tabby"]
+}
+```
+
+#### `PUT /gifs/{id}` - Update a subset of a specific GIF meme's metadata.
+
+**Body Example:**
+
+```json
+{
+  "url": "https://tenor.com/newcat.gif",
+  "tag": ["happy", "orange"]
+}
+```
+
+#### `DELETE /gifs/{id}` - Delete a specific GIF meme from the collection.
+
+## Authentication
+
+Restricted endpoints require a valid admin token. Add in the header: `Authorization: Bearer <ADMIN_TOKEN>`
+
+#### Example:
+
+```bash
+curl -X POST https://happycatapi.onrender.com/gifs \
+  -H "accept: application/json" \
+  -H "Authorization: Bearer <ADMIN_TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "happycat", "url": "https://tenor.com/bXAn9.gif", "tag": ["happy"]}'
+```
+
+## Discord Bot Integration
+
+The Happy Cat API powers a Discord bot that brings cat GIF joy directly to your server!
+
+**Features (in development):**
+
+- **/random** — Sends a random cat GIF in the activated channel.
+- **/cotd** — Shares the Cat of Today (COTD).
+- **/search [name]** — Fetches a specific cat GIF by name.
+
+You can invite the beta version of the bot to your server using [this link](https://discord.com/oauth2/authorize?client_id=1380723035082063923&permissions=2048&integration_type=0&scope=bot).
+
+See [**app/bot/**](/tree/main/app/bot) for implementation details and updates.
+
+## For Developers
+
+### Getting Started
+
+#### Clone the respository and install dependencies
+
+```bash
+$ git clone https://github.com/samcho02/happycatapi.git
+$ cd happycatapi
+$ pip install -r requirements.txt
+```
+
+#### Set up environment variables
+
+Copy `.env.example` to `.env` and fill in your MongoDB URI and admin token.
+
+#### Run the API server locally
+
+`$ uvicorn app.main:app --reload`
+
+- The API will be available at [http://127.0.0.1:8000/](http://127.0.0.1:8000/).
+- OpenAPI specification is available at [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs).
+
+#### Run the test suite
+
+`$ pytest`
+
+- 75+ automated tests ensure reliability and full coverage.
+
+---
+
+### Project Design
+
+- **Modular Structure:**  
+  The codebase is organized into clear modules for API routes, core logic, database access, schemas, and dependencies.
+- **Async & Scalable:**  
+  Built with FastAPI and async MongoDB drivers for high concurrency and performance.
+- **Data Validation:**  
+  All incoming and outgoing data is validated and serialized using Pydantic models.
+- **Separation of Concerns:**  
+  Public (GET) and restricted (POST/PUT/DELETE) endpoints are clearly separated and access-controlled.
+- **Thoroughly Tested:**  
+  All endpoints and edge cases are covered by automated pytest cases for confidence in every deployment.
+
+### Contributing
+
+Pull requests and issues are welcome!  
+If you’d like to contribute, please fork the repo and submit a PR.
+
+## Contact
+
+For questions, feedback, or to request admin access, please contact  
+[**szshn**](https://github.com/szshn) & [**samcho02**](https://github.com/samcho02)!
