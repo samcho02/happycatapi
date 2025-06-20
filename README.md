@@ -136,7 +136,7 @@ The Happy Cat API powers a Discord bot that brings cat GIF joy directly to your 
 
 You can invite the beta version of the bot to your server using [this link](https://discord.com/oauth2/authorize?client_id=1380723035082063923&permissions=2048&integration_type=0&scope=bot).
 
-See [**app/bot/**](/tree/main/app/bot) for implementation details and updates.
+See [**app/bot/**](/app/bot) for implementation details and updates.
 
 ## For Developers
 
