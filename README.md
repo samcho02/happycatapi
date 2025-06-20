@@ -1,6 +1,6 @@
-# Happy Cat API
+# happycatAPI
 
-Welcome to the **Happy Cat API**, your source for internet-famous cat GIFs! Brighten your day or your app with the world’s most beloved feline memes.
+Welcome to the **happycatAPI**, your source for internet-famous cat GIFs! Brighten your day or your app with the world’s most beloved feline memes.
 
 <img src="https://media1.tenor.com/m/_hUq1BSUsiMAAAAC/cat-cute.gif" alt="Jumping happy cat" width="180" height="180">
 
