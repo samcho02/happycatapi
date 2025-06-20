@@ -16,26 +16,30 @@ Welcome to the **happycatAPI**, your source for internet-famous cat GIFs! Bright
 
 ### Public Endpoints
 
-#### `GET /` - Welcome endpoint
+<details>
+<summary><code>GET /</code> - Welcome endpoint</summary>
+
 ```
 ^>⩊<^ Welcome to the Happy Cat API ^>⩊<^
 
-This API delivers GIFs of world-renowned cats — here to brighten your day.  
+This API delivers GIFs of world-renowned cats — here to brighten your day.
 Co-authored by Sujin Shin and Sungmin Cho.
 
 Available endpoints:
-GET /gifs           - Retrieve a list of all cat GIF memes  
+GET /gifs           - Retrieve a list of all cat GIF memes
 GET /gifs/{id}      - Retrieve details of a specific cat GIF meme
 ```
 
-#### `GET /gifs` - Retrieve a list of all cat GIF memes.
+</details>
 
-**Query Parameters:**\
+<details>
+<summary><code>GET /gifs</code> - Retrieve a list of all cat GIF memes.</summary>
+
+**Query Parameters:**  
 `tag` (optional): Filter GIFs by tag.
 
 ```bash
 $ curl -H "accept: application/json" https://happycatapi.onrender.com/gifs/
-
 {
   "gifs": [
     {
@@ -61,7 +65,10 @@ $ curl -H "accept: application/json" https://happycatapi.onrender.com/gifs/
 }
 ```
 
-#### `GET /gifs/random` - Retrieve a random cat GIF meme.
+</details>
+
+<details>
+<summary><code>GET /gifs/random</code> - Retrieve a random cat GIF meme.</summary>
 
 ```bash
 $ curl -H "accept: application/json" https://happycatapi.onrender.com/gifs/random
@@ -70,34 +77,34 @@ $ curl -H "accept: application/json" https://happycatapi.onrender.com/gifs/rando
   "id": "685382d38bf9e1317117dd96",
   "name": "huhcat",
   "url": "https://tenor.com/sqMU1WMDcgD.gif",
-  "tag": [
-    "huhcat"
-  ]
+  "tag": ["huhcat"]
 }
 ```
 
-#### `GET /gifs/{name}` - Retrieve details of a specific cat GIF meme by name.
+</details>
+
+<details>
+<summary><code>GET /gifs/{name}</code> - Retrieve details of a specific cat GIF meme by name.</summary>
 
 ```bash
 $ curl -H "accept: application/json" https://happycatapi.onrender.com/gifs/chipichipi
 
-   {
-      "id": "685382d48bf9e1317117dd97",
-      "name": "chipichipi",
-      "url": "https://tenor.com/dpqqxee0PFw.gif",
-      "tag": [
-        "chipichipi"
-      ]
-    }
+{
+  "id": "685382d48bf9e1317117dd97",
+  "name": "chipichipi",
+  "url": "https://tenor.com/dpqqxee0PFw.gif",
+  "tag": ["chipichipi"]
+}
 ```
+
+</details>
 
 ---
 
 ### Restricted Endpoints (Require [Authentication](#Authentication))
 
-> **Note:** To access these endpoints, include an `Authorization: Bearer <ADMIN_TOKEN>` header.
-
-#### `POST /gifs` - Upload a new cat GIF meme.
+<details>
+<summary><code>POST /gifs</code> - Upload a new cat GIF meme.</summary>
 
 **Body Example:**
 
@@ -109,7 +116,10 @@ $ curl -H "accept: application/json" https://happycatapi.onrender.com/gifs/chipi
 }
 ```
 
-#### `PUT /gifs/{id}` - Update a subset of a specific GIF meme's metadata.
+</details>
+
+<details>
+<summary><code>PUT /gifs/{id}</code> - Update a subset of a specific GIF meme's metadata.</summary>
 
 **Body Example:**
 
@@ -120,7 +130,12 @@ $ curl -H "accept: application/json" https://happycatapi.onrender.com/gifs/chipi
 }
 ```
 
-#### `DELETE /gifs/{id}` - Delete a specific GIF meme from the collection.
+</details>
+
+<details>
+<summary><code>DELETE /gifs/{id}</code> - Delete a specific GIF meme from the collection.</summary>
+No body required.
+</details>
 
 ## Authentication
 
