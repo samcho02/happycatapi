@@ -100,8 +100,7 @@ class gif_new_service:
         gif = {
             k: v for k, v in gif.model_dump(by_alias=True, mode="json").items() if v is not None
         }
-        
-        self.check_duplicate(id, gif.get("url"), gif.get("name"))
+        await self.check_duplicate(id, gif.get("name"), gif.get("url"))
         
         if len(gif) >= 1:
             update_result = await gifs_collection.find_one_and_update(

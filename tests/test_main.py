@@ -161,11 +161,13 @@ class TestGetByTag:
 @pytest.fixture
 async def test_gif_id(async_client):
     # If test gif exists, reuse it
-    headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
-    check = await async_client.get("/gifs/testcat", headers=headers)
-    if check.status_code == status.HTTP_200_OK:
+    if (check := await async_client.get("/gifs/testcat")).status_code == status.HTTP_200_OK:
         return check.json()["id"]
     
+    elif (check := await async_client.get("/gifs/test_update")).status_code == status.HTTP_200_OK:
+        return check.json()["id"]
+    
+    headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
     payload = {"name": "testcat", "url": "https://tenor.com/bdKzXnPAcGB.gif", "tag": ["test"]}
     response = await async_client.post("/gifs/", json=payload, headers=headers)
     
@@ -173,7 +175,7 @@ async def test_gif_id(async_client):
     assert response.json()["name"] == "testcat"
     assert response.json()["tag"] == ["test"]
     
-    return response.json()["id"]   # Store for other tests
+    return response.json()["id"]   # Store for future use
 
 @pytest.fixture
 async def deleted_test_gif_id(async_client, test_gif_id):
@@ -230,51 +232,56 @@ class TestAdd:
         headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
         response = await async_client.post("/gifs/", json=payload, headers=headers)
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-    
-    """
-    Fail: Add a GIF without authentication
-    - Omit the token or use an invalid token.
-    - Assert 403 Forbidden or 401 Unauthorized.
-    
-    Fail: Add a GIF with duplicate name or URL
-    - Add a GIF with a name or URL that already exists.
-    - Assert 409 Conflict or your chosen error code/message.
-    
-    Fail: Add a GIF with missing required fields
-    - Omit required fields (e.g., name, url).
-    - Assert 422 Unprocessable Entity.
-    
-    Fail: Add a GIF with invalid URL format
-    - Use an invalid URL in the payload.
-    - Assert 422 Unprocessable Entity.
-    """
 
 class TestUpdate:
-    """
-    Success: Update an existing GIF (with valid token)
-    - Send a valid update payload and a valid token for an existing GIF ID.
-    - Assert 200 OK and response reflects the update.
-
-    Fail: Update a non-existing GIF
-    - Use a valid token and a non-existent ID.
-    - Assert 404 Not Found.
-
-    Fail: Update with invalid or missing fields
-    - Send an invalid payload (e.g., missing required fields).
-    - Assert 422 Unprocessable Entity.
-
-    Fail: Update with duplicate name or URL
-    - Try to update a GIF to a name or URL that already exists for another GIF.
-    - Assert 409 Conflict or your chosen error code/message.
-
-    Fail: Update without authentication
-    - Omit the token or use an invalid token.
-    - Assert 403 Forbidden or 401 Unauthorized.
-
-    Fail: Update with invalid ID format
-    - Use an invalid ID (not a valid ObjectId).
-    - Assert 422 Unprocessable Entity or 400 Bad Request.
-    """
+    async def test_update_valid(self, async_client, test_gif_id):
+        headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+        payload = {"name": "test_update", "url": "https://tenor.com/fxcwiYUdHwv.gif", "tag": ["test", "microwave", "oiia"]}
+        response = await async_client.put(f"/gifs/{test_gif_id}", json=payload, headers=headers)
+        
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["name"] == "test_update"
+        assert response.json()["url"] == "https://tenor.com/fxcwiYUdHwv.gif"
+        assert response.json()["tag"] == ["test", "microwave", "oiia"]
+        
+    @pytest.mark.parametrize("token", [None, "clearlynotatoken"])
+    async def test_update_no_authentication(self, async_client, deleted_test_gif_id, token):
+        headers = {"Authorization": token} if token is not None else {}
+        payload = {"name": "test_update", "url": "https://tenor.com/fxcwiYUdHwv.gif", "tag": ["test", "microwave", "oiia"]}
+        response = await async_client.put(f"/gifs/{deleted_test_gif_id}", json=payload, headers=headers)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        
+    async def test_update_nonexisting(self, async_client, deleted_test_gif_id):
+        headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+        payload = {"name": "test_update", "url": "https://tenor.com/fxcwiYUdHwv.gif", "tag": ["test", "microwave", "oiia"]}
+        response = await async_client.put(f"/gifs/{deleted_test_gif_id}", json=payload, headers=headers)
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.json()["detail"] == f"GIF {deleted_test_gif_id} not found"
+        
+    async def test_update_duplicate_name(self, async_client, test_gif_id):
+        headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+        payload = {"name": "happycat"}
+        response = await async_client.put(f"/gifs/{test_gif_id}", json=payload, headers=headers)
+        assert response.status_code == status.HTTP_409_CONFLICT
+        
+    async def test_update_duplicate_url(self, async_client, test_gif_id):
+        headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+        payload = {"url": "https://tenor.com/bXAn9.gif"}
+        response = await async_client.put(f"/gifs/{test_gif_id}", json=payload, headers=headers)
+        assert response.status_code == status.HTTP_409_CONFLICT
+        
+    async def test_update_invalid_url(self, async_client, deleted_test_gif_id):
+        headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+        payload = {"name": "test_update", "url": "hello", "tag": ["test", "microwave", "oiia"]}
+        response = await async_client.put(f"/gifs/{deleted_test_gif_id}", json=payload, headers=headers)
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        
+    @pytest.mark.parametrize("id", ["123", "zzzzzz1234567890"])
+    async def test_update_invalid_id(self, async_client, id):
+        headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+        payload = {"name": "test_update"}
+        response = await async_client.put(f"/gifs/{id}", json=payload, headers=headers)
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 class TestDelete:
     async def test_delete_existing(self):
@@ -303,20 +310,3 @@ class TestDelete:
         assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
         assert response.json()["detail"] == f'Bad request: zzzzzz1234567890 is not a valid ID.'
         
-    """
-    Success: Delete an existing GIF (with valid token)
-    - Send a valid delete payload and a valid token for an existing GIF ID.
-    - Assert 204 No Content.
-        
-    Fail: Delete a non-existing GIF
-    - Use a valid token and a non-existent ID.
-    - Assert 404 Not Found.
-
-    Fail: Update without authentication
-    - Omit the token or use an invalid token.
-    - Assert 403 Forbidden or 401 Unauthorized.
-    
-    Fail: Update with invalid ID format
-    - Use an invalid ID (not a valid ObjectId).
-    - Assert 422 Unprocessable Entity or 400 Bad Request.
-    """
