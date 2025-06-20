@@ -158,21 +158,34 @@ class TestGetByTag:
         response = await async_client.get("/gifs/?tag=happycat", headers={"accept": accept})
         assert response.status_code == status.HTTP_406_NOT_ACCEPTABLE
 
-@pytest.fixture(scope="module")
-async def created_gif_id(async_client):
-    payload = {"name": "testcat", "url": "https://tenor.com/bdKzXnPAcGB.gif", "tag": ["test"]}
+@pytest.fixture
+async def test_gif_id(async_client):
+    # If test gif exists, reuse it
     headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+    check = await async_client.get("/gifs/testcat", headers=headers)
+    if check.status_code == status.HTTP_200_OK:
+        return check.json()["id"]
+    
+    payload = {"name": "testcat", "url": "https://tenor.com/bdKzXnPAcGB.gif", "tag": ["test"]}
     response = await async_client.post("/gifs/", json=payload, headers=headers)
+    
     assert response.status_code == status.HTTP_201_CREATED
     assert response.json()["name"] == "testcat"
     assert response.json()["tag"] == ["test"]
     
     return response.json()["id"]   # Store for other tests
 
+@pytest.fixture
+async def deleted_test_gif_id(async_client, test_gif_id):
+    headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+    response = await async_client.delete(f"/gifs/{test_gif_id}", headers=headers)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+    return test_gif_id
+
 class TestAdd:
-    async def test_add_accepts_initial(self, created_gif_id):
+    async def test_add_accepts_initial(self, test_gif_id):
         # Make sure name=testcat doesn't exist in DB
-        assert created_gif_id is not None
+        assert test_gif_id is not None
     
     async def test_add_rejects_no_authentication(self, async_client):
         payload = {"name": "test", "url": "https://tenor.com/h6lnHdUVixW.gif", "tag": ["test"]}
@@ -199,12 +212,12 @@ class TestAdd:
         assert response.status_code == status.HTTP_409_CONFLICT
         assert response.json()["detail"] == "Conflict: A GIF named testcat already exists."
     
-    async def test_add_rejects_duplicate_url(self, async_client, created_gif_id):
+    async def test_add_rejects_duplicate_url(self, async_client, test_gif_id):
         payload = {"name": "test", "url": "https://tenor.com/bdKzXnPAcGB.gif", "tag": ["test"]}
         headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
         response = await async_client.post("/gifs/", json=payload, headers=headers)
         assert response.status_code == status.HTTP_409_CONFLICT
-        assert response.json()["detail"] == f"Conflict: URL is tied to another GIF (id={created_gif_id})."
+        assert response.json()["detail"] == f"Conflict: URL is tied to another GIF (id={test_gif_id})."
     
     async def test_add_rejects_missing_tag(self, async_client):
         payload = {"name": "test", "url": "https://tenor.com/h6lnHdUVixW.gif"}
@@ -262,8 +275,34 @@ class TestUpdate:
     - Use an invalid ID (not a valid ObjectId).
     - Assert 422 Unprocessable Entity or 400 Bad Request.
     """
-    
+
 class TestDelete:
+    async def test_delete_existing(self):
+        assert deleted_test_gif_id is not None
+        
+    async def test_delete_no_authentication(self, async_client, deleted_test_gif_id):
+        # Will be flagged by empty header first, doesn't matter using nonexisting gif id here
+        response = await async_client.delete(f"/gifs/{deleted_test_gif_id}")
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        
+    async def test_delete_nonexisting(self, async_client, deleted_test_gif_id):
+        headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+        response = await async_client.delete(f"/gifs/{deleted_test_gif_id}", headers=headers)
+        assert response.status_code == status.HTTP_404_NOT_FOUND
+        assert response.json()["detail"] == f"GIF {deleted_test_gif_id} not found"
+        
+    async def test_delete_invalid_id_length(self, async_client):
+        headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+        response = await async_client.delete(f"/gifs/123", headers=headers)
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.json()["detail"] == f'Bad request: 123 is not a valid ID.'
+        
+    async def test_delete_invalid_id_nonhex(self, async_client):
+        headers = {"Authorization": f"Bearer {ADMIN_TOKEN}"}
+        response = await async_client.delete(f"/gifs/zzzzzz1234567890", headers=headers)
+        assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+        assert response.json()["detail"] == f'Bad request: zzzzzz1234567890 is not a valid ID.'
+        
     """
     Success: Delete an existing GIF (with valid token)
     - Send a valid delete payload and a valid token for an existing GIF ID.
